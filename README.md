@@ -1,133 +1,70 @@
 java c
-CSSE4630 Assignment 2: Dynamic Analysis: MBT, PBT, Concolic testing for Rust
-1    Introduction
-In this assignment you will learn about:
-• using the Rust testing framework to test a Rust library;
-• measuring several kinds of test coverage, including statement coverage and mutationscore;
-• using two black-box test generation techniques to make sure you are systematically testing a good range of the functional behaviour of the library (and we will measure the resulting
-code coverage to see if it is higher).  The two black-box techniques are:
-1.  simple model-based testing (MBT) based on finite-state machine models;
-2. property-based testing (PBT) to check particular properties of your implementation;
-• using a white-box test generation technique  (concolic testing) to achieve  100% branch coverage of a critical method.
-• the rules of Cribbage - a popular English pub card game, described by some as ‘a game of low, animal cunning’ .  See https://bicyclecards.com/how-to-play/cribbage
-1.1    Your Tasks - Overview
-Executive summary [20 marks for each task]:
-1. tests/unit .rs: Write some basic unit tests for Card and measure the mutation coverage of the given unit tests and your added unit tests.
-2. tests/mbt .rs: Use MBT to write some unit tests for CardDeck.
-3. tests/pbt .rs: Use PBT to write tests for cribbage score and peg points.
-4. tests/concolic.rs: Use concolic testing to achieve 100% branch coverage of Card::new.
-5. report.pdf: Write a reflective report on the benefits and limitations of each test-generation approach.
-You will use mutation testing to measure the coverage of your tests after each task.We will perform. the MBT and concolic test generation manually, so that you fully understand how these test generation techniques work.  (There are tools available, but our primary goal here is understanding the test generation approach, so it is better not to use tools at first.)For the property-based testing, we will use the proptest library, which integrates well with Rust and cargo  test.  It is the excellent tool support that makes property-based testing so much fun to use!Your submission for this assignment will include all of your code and output files, plus a report that summarises your results for each section.  This report should be called ‘report.pdf’ and should be placed inside the top-level folder of your submission.  It should start with a title, your full name and student number, then should have one section for each of the following sections of this assignment.  Each section should be as short as possible, ideally just presenting your results as a table and any relevant code fragments or output listings.
-1.2    School Policy on Student Misconduct
-This assignment is to be completed individually. You are required to read and understand the School Statement on Misconduct, available on the School website at:
-https://eecs.uq.edu.au/current-students/guidelines-and-policies-students/student-conduct
-1.3   Setup
-Download the Cribbage game from Blackboard, unzip it, and run the main program (from inside the unzipped directory) to check that everything works:
-cargo  run
-You should see output of a simulated Cribbage game, with either Alice or Bob winning.
-Then open the project in your favourite Rust IDE. I suggest using Visual Studio Code with the rust-analyzer extension installed, but you can use any IDE that supports Rust.
-Now run all tests using cargo  test.  As given to you, there are just some minimal tests in tests/unit .rs.
-These should all pass. But are they testing the code thoroughly?
-The first part of your assignment will be to measure how thoroughly these tests are testing your SUT...
-Note that all through this assignment, you should not change any of the SUT code in the src folder. You should only add tests and output files in the tests folder.
-2    Basic  Unit Testing [20 marks]
-Your Task: measure the mutation coverage of the given tests (rather insufficient), then write some basic unit tests for Card to improve the coverage of its methods.Use the Rust mutants tool to measure the mutation coverage of all your tests.  Some of your final marks will be based on the mutation coverage of all your tests, to measure the thoroughness of your testing.
+CSSE4630 Assignment One: Rust-Inspired Analyses
+2024 version 1.0
+1    IntroductionThis assignment is focused on several kinds of analysis inspired by the Rust programming language.  Rust is a strongly typed language that uses a sophisticated type system to prevent many kinds of programming errors, including memory safety errors.   It provides a powerful ownership system that allows the programmer to control the lifetimes of objects and ensure that they are not used after they have been deallocated.  This assignment will focus on two kinds of analysis that are used in Rust.The goal of the assignment is to give you experience with implementing static analyses, and at the same time develop a better understanding of the techniques that Rust uses to guarantee type safety and memory safety.
+You will first implement type checking for TIP, so that we can distinguish pointers from inte- gers.
+Then you will design a new analysis for TIP that corresponds to the ownership checker of Rust. Optionally, you can extend this analysis to be interprocedural.This assignment is worth 20% of your final mark for this course.  It is due on Friday 3-Oct-2024 before 4:00pm. You can submit your solution multiple times to Gradescope before this deadline, to check that various aspects are working correctly.
+2    School Policy on Student MisconductThis assignment is to be completed individually. You are required to read and understand the School Statement on Misconduct, available on the School’s website at:  https://eecs .uq .edu . au/current-students/guidelines-and-policies-students/student-conduct
+You may appropriately use AI as a programming aid while completing these assessment tasks, but you must clearly reference any AI-generated code (following the usual UQ AI guidelines: https://guides.library.uq.edu.au/referencing/generative-ai-tools-assignments), just as you should acknowledge any code fragments adapted from other internet sources.  Include these acknowledgements as comments in your Scala source code. A failure to reference genera- tive AI or machine translation (MT) use may constitute student misconduct under the Student Code of Conduct.
+3    Implementing Type Checking  [40%]
+The TIP system does not fully implement static type checking yet.  To see this, run the following command and read the exception it generates:
+tip  -types  examples/ptr7.tip
+Implement the missing cases in the visit method in TypeAnalysis .scala.  See Section 3.2 (Type Constraints) of the textbook for the rules you should implement.
 Hints:
-• Install mutation testing:  cargo  install  --locked  cargo-mutants
-• Run mutation testing on lib .rs only:  cargo  mutants  -f  src/lib .rs
-• Mutation Testing Docs: https://mutants .rsAdd your results into your report, in a table with at least the following columns (you can add extra columns if you desire).  The example values in square brackets are what you should get when you measure the mutation coverage of just the given tests:
-• Strategy: Unit / MBT / PBT / Concolic
-• Mut.  Generated: the number of mutations of lib .rs generated [108];
-• Mut. Missed: the number of mutations missed [95];
-• Mut. Killed: the number of mutations caught (killed) [6];
-• Mut. Unviable: mutations that are not viable [7];
-• Mut. Percentage: mutation coverage as a percentage [6/108 = 5.5%]; For example:
-Strategy
-Mut.Gen
-Missed
-Killed
-Unviable
-Mut. Coverage%
-Given
-108
-95
-6
-7
-5.5%Note that for the ‘Strategy’ column, ‘Given’ refers to the tests already included with the SUT distribution, and the other options are the various test generation strategies you will use during this assignment. The ‘Mut.Gen’ and ‘Unviable’ columns will be constant over the rows of your table since they depend only upon the SUT file (src/lib .rs in this case), but they are included for completeness.
-As well as command line output, full mutation testing output reports are generated in mu- tants.out folder. There you can see which mutants and lines of code are killed or not killed.
-Now:
-• Write some additional unit tests for the Card class to improve the mutation cover- age of its methods.  Note that you should not change the SUT code, only the tests in tests/unit .rs.
-•  Run the mutation coverage tool again to see if you have improved the coverage.
-• Record the results in your report, using ‘Unit’ as the strategy.
-•  Create a folder tests/unit and copy your mutation results from the mutants .out folder into that new folder to save your mutation coverage results for submission. You can copy just the text files:
-mkdir  tests/unit
-cp mutants .out/* .txt  tests/unit
-ls  -l  tests/unit   #  check  files  were  copied:  caught . txt,  missed . txt,  etc .
-3    Model-Based Testing  [20 marks]
-Your Task: use model-based testing to test the CardDeck methods.Write a small finite-state machine  (FSM) model of your SUT  (the  CardDeck structure and methods), with about 3-6 states. Since MBT is a black-box technique, do not look at the SUT code, just write your model based on the documentation of the SUT methods and the expected behaviour of the SUT.Manually generate tests from your model, using an all-transitions generation algorithm such as the Chinese postman algorithm. Write the resulting test sequences as Rust unit tests in a new test file called:
-tests/mbt .rs
-Run your model-based tests to see if the SUT satisfies the properties.Then measure your mutation coverage again and record your results. Make sure you are measuring just the mutation coverage of your MBT tests, not your other unit or PBT or concolic tests.  One simple way of doing this is to just rename those other test files temporarily to tests/* .RUST to prevent them from being run by cargo mutants.
-cargo mutants  -f  src/lib .rsAfter you are happy with your MBT tests, record your model in your report (a photo of the hand-written FSM is fine, or you can draw it using software if you prefer).  Add the resulting mutation coverage into your report, usin代 写CSSE4630 Assignment 2: Dynamic Analysis: MBT, PBT, Concolic testing for RustJava
-代做程序编程语言g the same table format as in the previous section, but with ‘MBT’ as the strategy. Make sure you are measuring the mutation coverage of only your MBT tests, not your other unit or PBT or concolic tests.
-Create the folder tests/mbt and copy your mutation coverage results from the mutants .out folder into that new folder to save them. Just copy the text files.
-4    Property-Based Testing  [20 marks]
-Your Task: use property-based testing  (and the proptest tool) to test the cribbage   score and peg points functions.
-Install the ‘proptest’ library, which is a property-based testing library for Rust.  Then write some properties for the cribbage score and peg points functions, in the file:
-tests/pbt .rsTry to make each property test capture some of the interesting behaviour of the SUT. Since PBT is a black-box technique, do not look at the SUT code, just write your properties based on the documentation of the SUT structures and methods.
-Run your PBT tests to see if the SUT satisfies the properties.After you have got your properties working with no errors, record your properties in your report with a human-readable explanation / rationale for each property together with the name of that property test method.Then measure the statement and mutation coverage of the SUT using all your PBT tests, and add the resulting statement and mutation coverage into your report as a new row of your coverage table, with strategy ‘PBT’ . Make sure you are measuring the mutation coverage of only your PBT tests, not your other unit or MBT or concolic tests.
-Create the folder tests/pbt and copy your mutation coverage results from the mutants .out folder into that new folder to save them. Just copy the text files.
+1.  The solver is already created for you, so you can just call its unify method.
+2.  The  address-of  constructor in the textbook  (X) corresponds to PointerRef(   ) in the Scala code.
+3.  To allocate a fresh variable (called α in the textbook) use the FreshVariable() function.
+4. It is important that each occurrence of the same TIP variable must be mapped to the same type variable. You could implement this yourself, by defining a mapping from identifiers to type variables, but this gets quite tricky, because you really need to take into account the scope of each variable.  For example, two different functions might both use a variable with the same name, but we should really treat them as separate variables, possibly with different types!  Fortunately, TIP makes our task easier by providing the declData(id) method, which maps each variable to its correct declaration.  So rather than implementing your own mapping, you can use this method to get a common handle (the declaration object) for all occurrences of a variable in that scope, then map that declaration object to a unique type variable for all occurrences of the identifier.
+3.1    Checking your resultsUse your type checking algorithm to analyse the tests/main1.tip program. You can download several example test files like this from Blackboard. This example checks that you are unifying type variables correctly, and also that your type checking algorithm knows that the main method is special, because it always has integer inputs and outputs.
+You should see standard output being printed that includes the following results:
+[info]  Inferred  types:
+[ main(a[2 : 6], b[2 : 9])... : 1 : 1I  =   (int,int)  ->  int
+[ a[2 : 6]I  =  int
+[ b[2 : 9]I  =  int
+[ c[3 : 9]I  =  intYou can submit your solution (multiple times) to Gradescope to get feedback from several tests like this. After the deadline, your final typechecker will be tested using additional test programs and marked for correctness and elegance.
+4    Implementing a Simple Ownership Algorithm  [40%]Next we want to implement a simple ‘ownership’ algorithm for heap variables, to track a unique owner for each heap-allocated memory location.  When this owner goes out of scope, we can deallocate that heap variable.  Variables that store non-heap values,  such as integers, we can ignore.
+For our analysis, we will map each variable to an  ownership  status, which will be one of the following three options:
+• HeapOwner:  the variable points to a heap-allocated value and is the unique owner of that value.
+• HeapNotOwner: the variable points to a heap-allocated value but is NOT the owner of that value. It is illegal to read the heap value via this variable.
+• NonHeap:  the variable does not point to the heap.  For example the variable contains integer values.Our analysis will be a forward  analysis.  Initially, we will start with a simple  intraprocedural analysis and will restrict our input language so that pointers only point directly to heap allocated values, not to local variables, and not to other pointers in the heap.  In other words, you can assume that:
+1. the address-of  (x) operator will not appear in our input programs.
+2. the value stored inside a heap allocated memory location will always be an integer. The rules for ownership analysis of a CFG node v are as follows:
+[vars v1 , v2 , . . .I   =   JOIN(v)[v1  \→ 丄, v2  \→ 丄, . . .]
+[x = yI   =   JOIN(v)[x \→ eval(y, JOIN(v)), y \→ yo], where
+yo   = let o = eval(y, JOIN(v)) in (if (o = HeapOwner) o else HeapNotOwner)
+[x = EI   =   JOIN(v)[x \→ eval(y, JOIN(v))],  if E is not an identifierFor the eval function, alloc  e should evaluate to HeapOwner obviously. All non-pointer values such as integers will evaluate to NonHeap. So all binary operators and constants will evaluate to NonHeap. The dereference operator x代 写CSSE4630 Assignment One: Rust-Inspired Analyses 2024C/C++
+代做程序编程语言 must check that x is a HeapOwner, and if so, return NonHeap (because the dereferenced result should be an integer), otherwise give either an error or a warning:
+• Reason .OwnershipError if x is definitely not a HeapOwner.
+Error message should be: illegal  dereference  when  not  owner: x.
+• Reason.OwnershipWarning if x might not be a HeapOwner.
+Warning message should be: dereference  when may  not  be  owner: x.
 Hints:
-• Install proptest:  cargo  add  proptest
-• Run as usual: cargo  test
-• Docs: https://crates .io/crates/proptest
-• Book: https://altsysrq.github .io/rustdoc/proptest/latest/proptest
-5    Concolic Testing  [20 marks]Your Task: Use concolic testing (a white-box test technique) to generate tests for the Card::new method, which contains a few simple code paths. Start by calling Card::new(5,  Suit::Hearts). Then use the concolic testing technique to explore all the different code paths through the   method.
-Write your generated tests as unit tests, and record them in a new test file: tests/concolic .rsSince concolic testing is a white-box testing technique, you must look at the SUT code as you generate your tests. Your goal is to use concolic testing to achieve 100% condition  coverage of this method (this is a little more demanding than just branch coverage).Each concolic test you generate should contain one main call of your target method. However, before calling your target method you may need to call some constructors and other methods to get the SUT into the required state, and after calling your target method, you may need to call some other query methods so that your JUnit test can check that the test has made the correct state changes to your SUT object or has returned the correct result.
-Record each test that you generate in your report as follows:
-Run: the number of your test, starting from 1.
-Setup:  any constructor calls and setup code needed before calling your
-target method;
-Target: the  call to your target  SUT method, with input values named
-with zero subscripts. For example: foo(x0 = 4, size0  = −10)
-Path: this consists of a numbered sequence of assignments and branchconditions showing the path that your test took through the code, including the true/false direction of each branch, and any new or updated variables showing their new values.  Give each updated variable a fresh name by incrementing a counter subscript. (or suffix) on the variable, so that your SMT Constraints can refer to an unambiguous version of the variable. For example:
-1. Assign: x1 = x0 + 1
-2.  Branch: x1  < 10 −→ true
-3. Assign: x2 = x1 * y0
-4.  Branch: y0  > 0 −→ false
-5.  Return: x2
-Output: the output value that your target method returned on this run
-(or the exception that it threw);
-Next: the number and condition of the branch that you decide to explore
-next and the desired direction (true or false);
-SMT Constraints: the collected constraints that will enable that direction to betaken- these are what you would send to an SMT solver to calculate a solution, but for this exercise you can calculate a solution using your human solving abilities. Example: x1  = x0+1, not(x1  < 10).
-SMT Solution: the output of your (human) ‘SMT solver’ . That is, a value for eachinput variable that satisfies all those constraints. These values will become the input parameters for your next call to your target SUT method. Example: x0 = 9, size0  = 1.
-Just as an example, here is how you might record your first concolic-generated test in your report if you were testing a Java ArrayList add method:
-Run:  test1
-Setup:        s  =  new  ArrayList();   //  sets  ’size_0’  to  0,  ’capacity_0’  to  4 Target:      s.add(elem_0  =  42);
-Path:
-1:  Branch:  if  (size_0  +  1  < capacity_0) ->  true 2:  Assign:  data_0[size_0]  =  elem_0
-3:  Assign:  size_1  =  size_0  +  1 Output:      success  (true)
-Next:          if  (size_0  +  1  < capacity_0) ->  false
-SMT  Constraints:  capacity_0  =  4,  not(size_0  +  1  < capacity_0)
-SMT  Solution:       size_0  ==  3,  so  call  add(_)  3  times,  then  call  add(42) .
-Run:  test2
-Target:      s.add(elem_0  =  42); Path:
-1:  Branch:  if  (size_0  +  1  < capacity_0) ->  false 2:  etc .Also, write each one of these tests as a new test method with the same name (test1, test2 etc.) in your tests/concolic.rs file, so that the connection between your concolic design process and your final test code is clear.When you are satisfied that you have generated enough tests for your target SUT method, measure the coverage metrics of your generated concolic tests on the SUT, and record them in your report as another row in your coverage table, with strategy ‘Concolic’ .
-Create the folder tests/concolic and copy your mutation coverage results from the mutants .out folder into that new folder to save them. Just copy the text files.
-6    Conclusions and  Reflections [20 marks]Now run ALL your tests (MBT, PBT and Concolic) and calculate their total coverage of the SUT. Record this coverage as the final row in your coverage table, labelled with strategy To- tal.
-Create the folder tests/total and copy your mutation coverage results from the mutants .out folder into that new folder to save them. Just copy the text files.
-Write a final section in your report entitled ‘Conclusions and Reflections’ (less than one page), that includes:
-1. [6 marks] Your coverage table and/or graph summarising your coverage results from each section (Sections 2-5), including coverage results of running ALL the tests on the SUT (the ‘Total’ row).
-2. [8 marks] Your Conclusions about the benefits and limitations of each test-generation approach and how they compare;
-3. [6 marks] Your Reflections on this assignment and what you learned.
-7    Submission
-This assignment is due on Friday of Week 13 (25 October 2024, 4pm Queensland time).
-Submit your whole repository on Gradescope, in a single *.zip file.  Make sure you include at least:
-• your report.pdf file inside the top level folder of your submission;
-• the ‘src’ folder with the unchanged SUT code;
-• the ‘tests’ folders with all your testing source code, plus the corresponding subfolders with your * .txt mutation coverage output files;
-• the ‘proptest-regressions’ folders, which contain results of your proptest runs;
-• your Cargo .toml file so that we can build and run your code if necessary.
+1. A good strategy when developing a new feature in an unfamiliar system is to start by copying and modifying one of the existing features.  In this case, you might start off by copying SimpleSignAnalysis.scala and renaming everything to OwnershipAnalysis.  For the simplest approach, I suggest starting from SimpleSignAnalysis, because it also uses a nice small flat lattice, is a forward analysis, and is written in an easy-to-understand self- contained style. (rather than using inheritance to reuse worklist solvers, etc.  which is a better approach in the long term, but requires more knowledge of all the various traits and classes available in TIP). However, if you plan to do the advanced interprocedural analysis (Section 5) part of this assignment, you might want to start by copying the more complex SignAnalysis.scala, because it illustrates how to support the interprocedural analysis that you will need for that part of the assignment.
+2.  To integrate your new analysis into the tip command line,  you will need to define  a new command line flag (-ownership) and implement this in at least Tip .scala and the master controller superclass FlowSensitiveAnalysis.  Again, follow a similar example: SimpleSignAnalysis or SignAnalysis.
+4.1    Reporting Ownership  Errors and WarningsGenerate an error whenever the program tries to reference a heap-allocated value that is defi- nitely not owned by the current variable.  Generate a warning whenever a variable is derefer- enced that may  not be a HeapOwner (e.g. Top).  For the automated testing and marking of your solution you must report these errors and warnings in exactly the way described in this section.You must use the supplied MessageHandler class to record and print all your error and warning message. Download this Scala class from Blackboard and put it into the src/tip/util folder of your TIP project.   Create a new instance of the MessageHandler class as a field of your analysis class.Then in your analysis code call the message(Level,  Location,  Msg) method of your message handler whenever you want to record an error or warning.  The Level parameter should be OwnershipError or OwnershipWarning,  or None if there is no error at that location.   The Location parameter is the location in the program where the error or warning occurs  (you can get this from the loc field of the statement or expression you are analysing), and the Msg parameter should be a string that describes the error or warning.You should also clear any previous error messages for the same location before adding a new one, so that you do not get multiple error messages for the same location. For example, you should have code like this in your analysis for each of your ownership error or warning checks:
+if  (some  condition )  {
+//  no  error  here,  so  clear  any  previous  error message  for  this  location msgs.message(msgs.Reason.None,  loc)
+.  .  .
+}  else  {
+val  reason  = msgs .Reason .OwnershipError
+msgs.message(reason,  loc,  s"illegal  dereference  when  not  owner:  $expr")
+.  .  .
+}
+5    Advanced Ownership - Interprocedural [20%]This is a more difficult part of the assignment that you should attempt only after completing all previous parts.  The goal is to improve your ownership checker so that it can also analyse TIP programs that use function calls.
+Follow the general interprocedural rules given in Section 8.1 of the textbook.  You should im- plement at least the iwlr version of your interprocedural analysis, so that when you run:
+• tip  -ownership  tests/ownership1.tip it runs the intraprocedural version of your anal- ysis.
+• tip  -ownership  iwlr  tests/ownership1.tip it runs the interprocedural version of your analysis.
+In practice, you should include the following options in your TIP command line to ensure that programs are normalised into a standard form.
+• -normalizereturns normalize return statements
+• -normalizecalls normalize function calls
+• -normalizepointers normalize pointer usagesWe are not concerned with the full Rust ownership system, so you can ignore the borrow checker and the lifetime annotations.  In other words, you can still assume that the address-of (x) operator will not appear in our input programs and that heap locations will only store  integers.
+Hints:
+1. If you want to implement the interprocedural analysis,I recommend you use the SignAnalysis class as a starting point, because it already has the necessary infrastructure for interpro-cedural analysis, such as using an interprocedural CFG.
+2.  One of the challenges with interprocedural analysis is finding the connections between caller and callee functions. Fortunately, the InterproceduralProgramCfg pre-calculates these connections for you.  A CfgFunEntryNode node has a callers field that gives you the set of all functions that call this function and a CfgCallNode has a callees field that gives the set of possible functions being called.  Also, a CfgAfterCallNode node has a calleeExits field that gives you all the function exit nodes that might be returning to that after-call node.  So you can use these fields to find the connections between caller and callee functions.
+6    SubmissionSubmit your assignment via Gradescope, as a single zip file containing your whole tip directory (with subdirectories called src, tests, out etc.).  The src subdirectory will include your mod- ified Scala source files that implement your pointer analysis algorithms. The out subdirectory should include your output files for each *.tip test file in the tests directory.You can submit multiple times before the deadline to check that your submission has the correct structure and that the provided tests work correctly.  It is your last submission before the deadline that will count.
+After the deadline, your final submission will be tested using additional test programs and marked for correctness and elegance.
+
+
 
 
 
